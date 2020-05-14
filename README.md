@@ -1,4 +1,4 @@
-# Spotify-data-analysis
+# Spotify-data-analysis-and-genre-prediction
 Spotify is one of the largest music streaming services all over the world. With 271 million monthly active users, including 124 million paying subscribers, it is the ideal platform for artists to reach their audience. 
 At the heart of Spotify lives a massive and growing data-set. What if we could analyze the music we listen to using Data Science?
 
