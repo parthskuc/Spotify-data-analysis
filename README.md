@@ -1,7 +1,9 @@
 # Spotify-data-analysis-and-genre-prediction
+
 Spotify is one of the largest music streaming services all over the world. With 271 million monthly active users, including 124 million paying subscribers, it is the ideal platform for artists to reach their audience. 
 At the heart of Spotify lives a massive and growing data-set. What if we could analyze the music we listen to using Data Science?
 
+## Problem Statement
 In this analysis, I would mine the nuggets of insight hidden beneath mountains of Spotify data. In doing so, gain a greater understanding of the type of genres, 
 tracks and artists the consumers have been listening to on Spotify.
 
@@ -20,7 +22,7 @@ Broadly, we will be performing the following steps to accomplish the project obj
 
 This analysis can help understand consumer behavior and suggest what music are they looking for and hence provide direction to artists and music producers.
 
-Methodology
+## Methodology
 
 1. I started by looking at correlations amongst various features followed by the distributions for each of these features.
 2. I then examined the top artists within each genre using tree map.
@@ -28,7 +30,7 @@ Methodology
 4. I then analysed how various major features evolved in the past decade.
 5. Lastly, I performed k-means and hierarchical clustering to understand commonalities between various genres and found the optimal number of clusters using elbow method.
 
-Insights
+## Insights
 
 1. Energy is highly positively correlated with loudness while it is highly negatively correlated with acousticness.
 2. A lot of songs high a popularity score of 0, which means a lot of songs haven’t been explored yet.
@@ -40,13 +42,13 @@ Insights
 6. Even though we have six genres in the data, as per clustering technique we got only 3 optimal clusters which means a lot of 
    the genres are very similar.
    
-Implications
+## Implications
 
 1. This analysis was conducted to explore the evolution of music over time and also diving deeper to understand trends in what makes a song more danceable than others can help DJs, artists, and producers create music based on characteristics like tempo or level of speechiness.
 
 2. Netflix has a commendable job by leveraging data to produce video content, and the next music revolution could be brought in by similar techniques.
 
-Limitations
+## Limitations
 
 1. Even though there are millions of songs that exist, we only had about 32k records for our analysis, and hence we couldn’t obtain a full picture of the features of music.
 
