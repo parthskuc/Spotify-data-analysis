@@ -1,0 +1,665 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    code_folding: "hide"
+    df_print: paged
+---
+
+# Spotify Data Cluster Analysis  {.tabset .tabset-fade .tabset-pills}
+## Executive Summary
+Nowadays online music streaming is becoming dominant medium for individuals to tune in to their favorite songs, music streaming services are now able to gather a lot of data on the listening habits of their customers. These streaming services, like Spotify, Apple Music or Pandora, are using this data to provide recommendations to their listeners.
+Spotify is one of popular music platform. Every year, it launches the 50 most popular songs by singer, genre etc.   
+![](/Users/home/Documents/Spotify data/spotify.jpg)
+
+>**Problem**
+We aim to study the various attributes of a song and predict the genre.
+
+>**Methodology**
+Broadly, we will be performing the following steps to accomplish the project objectives:
+
+**Perform Exploratory Data Analysis:**
+
+1. Visulization of audio feaftures of different genres
+2. Correlation between features
+3. Popular artists within each genre
+
+**Generate Insights:**
+
+1. Trends of popular features in the past decade
+2. Variability of characteristics across genres
+
+**Implement Clustering:**
+
+1. Apply k-means clustering algorithm
+2. Apply hierachical clustering algorithm
+3. Use elbow curve which helps to find the optimum number of clusters
+4. Comparisons
+
+## Glossary of Song Terms
+1. **key** - The estimated overall key of the track. Integers map to pitches using standard Pitch Class notation . E.g. 0 = C, 1 = C♯/D♭, 2 = D, and so on. If no key was detected, the value is -1.  
+
+2. **mode** - Mode indicates the modality (major or minor) of a track, the type of scale from which its melodic content is derived. Major is represented by 1 and minor is 0.  
+
+3. **time_signature** - An estimated overall time signature of a track. The time signature (meter) is a notational convention to specify how many beats are in each bar (or measure).  
+
+4. **acousticness** - A confidence measure from 0.0 to 1.0 of whether the track is acoustic. 1.0 represents high confidence the track is acoustic.  
+
+5. **danceability** - Danceability describes how suitable a track is for dancing based on a combination of musical elements including tempo, rhythm stability, beat strength, and overall regularity. A value of 0.0 is least danceable and 1.0 is most danceable.  
+  
+6. **energy** - Energy is a measure from 0.0 to 1.0 and represents a perceptual measure of intensity and activity. Typically, energetic tracks feel fast, loud, and noisy. For example, death metal has high energy, while a Bach prelude scores low on the scale. Perceptual features contributing to this attribute include dynamic range, perceived loudness, timbre, onset rate, and general entropy.  
+
+7. **instumentalness** - Predicts whether a track contains no vocals. “Ooh” and “aah” sounds are treated as instrumental in this context. Rap or spoken word tracks are clearly “vocal”. The closer the instrumentalness value is to 1.0, the greater likelihood the track contains no vocal content. Values above 0.5 are intended to represent instrumental tracks, but confidence is higher as the value approaches 1.0.  
+
+8. **liveness** - Detects the presence of an audience in the recording. Higher liveness values represent an increased probability that the track was performed live. A value above 0.8 provides strong likelihood that the track is live  
+
+9. **loudness** - The overall loudness of a track in decibels (dB). Loudness values are averaged across the entire track and are useful for comparing relative loudness of tracks. Loudness is the quality of a sound that is the primary psychological correlate of physical strength (amplitude). Values typical range between -60 and 0 db.  
+
+10. **speechiness** - Speechiness detects the presence of spoken words in a track. The more exclusively speech-like the recording (e.g. talk show, audio book, poetry), the closer to 1.0 the attribute value. Values above 0.66 describe tracks that are probably made entirely of spoken words. Values between 0.33 and 0.66 describe tracks that may contain both music and speech, either in sections or layered, including such cases as rap music. Values below 0.33 most likely represent music and other non-speech-like track  
+
+11. **valence** - A measure from 0.0 to 1.0 describing the musical positiveness conveyed by a track. Tracks with high valence sound more positive (e.g. happy, cheerful, euphoric), while tracks with low valence sound more negative (e.g. sad, depressed, angry).  
+
+12. **tempo** - The overall estimated tempo of a track in beats per minute (BPM). In musical terminology, tempo is the speed or pace of a given piece and derives directly from the average beat duration.
+
+
+
+## Data Preparation {.tabset .tabset-fade .tabset-pills}
+###  Loading Libraries
+
+The following packages have been used for the analysis:
+
+1. dplyr : For data manipulation
+2. ggplot2 : For customizable graphical representation
+3. plotly : For interactive plots
+4. tidyverse : For data wrangling
+5. kableExtra : For building tables
+6. DT : For previewing the data sets
+7. corrplot : For visualizing the correlation plots
+8. gridExtra : For using addition functionalities in grid graphics
+9. treemap : For visualizing the treemap plots
+10. viridisLite : For generating the color vectors
+11. fmsb : For visualizing the radar plots
+12. cowplot : For providing addition functionalities to ggplot
+13. factoextra : For determine the optimal number clusters
+14. formattable : For more readable and impactful tabular formats
+
+```{r include=FALSE}
+library(readr)
+library(tidyverse)
+library(knitr)
+library(dplyr)
+library(psych)
+library(ggplot2)
+library(cowplot)
+library(psych)
+library(ROCR)
+library(rpart)
+library(rpart.plot)
+library(DT)
+library(treemap)
+library(viridisLite)
+library(formattable)
+library(kableExtra)
+library(corrplot)
+library(fpc)
+library(factoextra)
+```
+
+###  Data Set
+**Reading the data**
+
+```{r}
+spotify=read.csv('spotify_songs.csv', stringsAsFactors = FALSE)
+head(spotify)
+```
+
+### Data Description
+
+**Data Description**
+
+```{r}
+var_desc<-c("Song unique ID","Song Name","Song Artist","Song Popularity (0-100) where higher is better","Album unique ID","Song album name","Date when album released","Name of playlist","Playlist ID","Playlist genre","Playlist subgenre","Danceability describes how suitable a track is for dancing based on a combination of musical elements including tempo, rhythm stability, beat strength, and overall regularity. A value of 0.0 is least danceable and 1.0 is most danceable.","Energy is a measure from 0.0 to 1.0 and represents a perceptual measure of intensity and activity. Typically, energetic tracks feel fast, loud, and noisy. For example, death metal has high energy, while a Bach prelude scores low on the scale. Perceptual features contributing to this attribute include dynamic range, perceived loudness, timbre, onset rate, and general entropy.","The estimated overall key of the track. Integers map to pitches using standard Pitch Class notation . E.g. 0 = C, 1 = C?/D?, 2 = D, and so on. If no key was detected, the value is -1.","The overall loudness of a track in decibels (dB). Loudness values are averaged across the entire track and are useful for comparing relative loudness of tracks. Loudness is the quality of a sound that is the primary psychological correlate of physical strength (amplitude). Values typical range between -60 and 0 db.","Mode indicates the modality (major or minor) of a track, the type of scale from which its melodic content is derived. Major is represented by 1 and minor is 0.","Speechiness detects the presence of spoken words in a track. The more exclusively speech-like the recording (e.g. talk show, audio book, poetry), the closer to 1.0 the attribute value. Values above 0.66 describe tracks that are probably made entirely of spoken words. Values between 0.33 and 0.66 describe tracks that may contain both music and speech, either in sections or layered, including such cases as rap music. Values below 0.33 most likely represent music and other non-speech-like tracks.","A confidence measure from 0.0 to 1.0 of whether the track is acoustic. 1.0 represents high confidence the track is acoustic.","Predicts whether a track contains no vocals. “Ooh” and “aah” sounds are treated as instrumental in this context. Rap or spoken word tracks are clearly “vocal”. The closer the instrumentalness value is to 1.0, the greater likelihood the track contains no vocal content. Values above 0.5 are intended to represent instrumental tracks, but confidence is higher as the value approaches 1.0.","Detects the presence of an audience in the recording. Higher liveness values represent an increased probability that the track was performed live. A value above 0.8 provides strong likelihood that the track is live.","A measure from 0.0 to 1.0 describing the musical positiveness conveyed by a track. Tracks with high valence sound more positive (e.g. happy, cheerful, euphoric), while tracks with low valence sound more negative (e.g. sad, depressed, angry).","The overall estimated tempo of a track in beats per minute (BPM). In musical terminology, tempo is the speed or pace of a given piece and derives directly from the average beat duration.","Duration of song in milliseconds")
+spotify.type<-lapply(spotify,class)
+var_names<-colnames(spotify)
+data.desc<-as_tibble(cbind(var_names,spotify.type,var_desc))
+kable(data.desc)
+```
+
+
+
+**Summary Statistics of the data**
+
+```{r}
+str(spotify)
+```
+
+
+```{r}
+dim(spotify)
+```
+
+```{r}
+spotify<-spotify %>% mutate(track_year=substr(spotify$track_album_release_date, 1, 4))
+spotify$track_year <- as.numeric(spotify$track_year)
+head(spotify)
+```
+
+```{r}
+summary(spotify)
+```
+
+### Checking Data Quality
+
+```{r}
+# percentage of missing data in each columns
+round(colSums(is.na(spotify)*100/nrow(spotify)),2)
+```
+
+
+```{r}
+library(DataExplorer)
+plot_missing(spotify)
+
+```
+
+**Missing values treatment**
+We can observe that there are 5 missing values in the columns ‘track_name’, ‘track_artist’ and ‘track_album_name’ in our dataset. Since these 5 records correspond to just 0.00015% of the dataset so, we would remove these observations with missing values from our dataset from further analysis.
+
+```{r}
+#checking for duplicate rows
+spotify[!duplicated(spotify[1:23]),]
+```
+There are no duplicate rows present in the dataset.
+
+
+**Clean Data**
+
+```{r}
+DT::datatable(head(spotify,1000),options = list(
+  pageLength=5, scrollX = T,autoWidth = TRUE),class = 'cell-border stripe')
+```
+
+
+```{r include=FALSE}
+spotify$genre <- spotify$playlist_genre
+spotify$genre <- as.factor(spotify$genre)
+spotify$genre <- as.numeric(spotify$genre)
+```
+
+```{r}
+#counting the number of songs by genre
+spotify %>% count(playlist_genre)
+```
+
+```{r include=FALSE}
+numeric_features <-as.data.frame(spotify[,c(4,12:25)])
+```
+
+```{r include=FALSE}
+summary(numeric_features)
+```
+
+
+## Exploratory Data Analysis
+
+To begin our analysis, we simply wanted to plot the proportion of playlist genres accoss our dataset. The below plot depicts the required proportion in Spotify data.
+
+**Proportion of playlist genres**
+```{r}
+songs_clean_pie_data <- spotify %>% 
+  group_by(playlist_genre) %>% 
+  summarise(Total_number_of_tracks = length(playlist_genre))
+
+ggplot(songs_clean_pie_data, aes(x="", y=Total_number_of_tracks, fill=playlist_genre)) + 
+  geom_bar(width = 1, stat = "identity") + 
+  coord_polar("y", start=0) + 
+  geom_text(aes(label = paste(round(Total_number_of_tracks / sum(Total_number_of_tracks) * 100, 1), "%")),
+            position = position_stack(vjust = 0.5))
+```
+
+It appears that our Spotify dataset is somewhat uniformly distributed across playlist genres with each genre having 15-18% records each.
+EDM has the highest proportion of genres with 18.4%.
+
+
+
+```{r}
+top_genre <- spotify %>% select(playlist_genre, track_artist, track_popularity) %>% group_by(playlist_genre,track_artist) %>% summarise(n = n()) %>% top_n(15, n)
+
+tm <- treemap(top_genre, index = c("playlist_genre", "track_artist"), vSize = "n", vColor = 'playlist_genre', palette =  viridis(6),title="Top 15 Track Artists within each Playlist Genre")
+```
+
+Above, treemap depicts top 15 track artists with in each of the 6 playlist genre. The size of the boxes in treemap corresponds to the count tracks for the artists.
+For genre edm, rock, pop, rap, latin and r&b, the top track artist are Martin Garrix, Queen, The Chainsmoker, Logic, Don Omar and Bobby Brown respectively.
+
+```{r}
+#plotting the distribution of years of tracks
+dance1<-ggplot(spotify, aes(danceability)) + 
+  geom_histogram(bins = 20) +
+  ggtitle("Plot of Danceability Distribution") +
+  theme(plot.title = element_text(size = 11))
+
+#plotting the distribution of energy of tracks
+energy2<-ggplot(spotify, aes(energy)) + 
+  geom_histogram(bins = 20) +
+  ggtitle("Plot of energy Distribution") +
+  theme(plot.title = element_text(size = 11))
+
+#ploting the distribution of loudness of tracks
+loud3<-ggplot(spotify, aes(loudness)) + 
+  geom_histogram(bins = 20) +
+  ggtitle("Plot of loudness Distribution") +
+  theme(plot.title = element_text(size = 11))
+
+#plotting the speechness of years of tracks
+speech4 <- ggplot(spotify, aes(speechiness)) + 
+  geom_histogram(bins = 20) +
+  ggtitle("Plot of speechiness Distribution") +
+  theme(plot.title = element_text(size = 11))
+
+
+
+plot_grid(dance1, energy2, loud3,speech4, labels = "AUTO")
+```
+
+
+
+```{r}
+#plotting the liveness of years of tracks
+live5<-ggplot(spotify, aes(liveness)) + 
+  geom_histogram(bins = 20) +
+  ggtitle("Plot of liveness Distribution") +
+  theme(plot.title = element_text(size = 11))
+
+#plotting the instrumentalness of years of tracks
+instrument6<-ggplot(spotify, aes(instrumentalness)) + 
+  geom_histogram(bins = 20) +
+  ggtitle("Plot of instrumentalness Distribution") +
+  theme(plot.title = element_text(size = 11))
+
+#plotting the valence(positivity) of years of tracks
+valence7<-ggplot(spotify, aes(valence)) + 
+  geom_histogram(bins = 20) +
+  ggtitle("Plot of valence Distribution") +
+  theme(plot.title = element_text(size = 11))
+
+#plotting the tempo of years of tracks
+tempo8<-ggplot(spotify, aes(tempo)) + 
+  geom_histogram(bins = 20) +
+  ggtitle("Plot of tempo Distribution") +
+  theme(plot.title = element_text(size = 11))
+
+plot_grid(live5, instrument6, valence7,tempo8, labels = "AUTO")
+```
+
+```{r}
+songs_correlation <- cor(numeric_features)
+corrplot(songs_correlation, type = "upper", tl.srt = 45)
+```
+
+It appears that energy and loudness are highly positively correlated while, energy and acousticness are highly negatively correlated with each other.
+
+Also, loudenss & acousticness, valence & danceability, loudenss & year and duration_ms & year are moderatly correlated with each other.
+
+**Density plots**
+
+```{r}
+#plotting the distribution of years of tracks
+ggplot(spotify, aes(track_year, fill=playlist_genre)) + 
+  geom_density(alpha = 0.3) + theme_bw() +
+  ggtitle("Plot of Track year Distribution") +
+  theme(plot.title = element_text(size = 11))
+```
+
+Rock originated somewhere around 1960s and rap around 1980s wheras pop and edm are more recent genres of music.
+
+```{r}
+#plotting the distribution of tempo of tracks
+ggplot(spotify, aes(tempo, fill=playlist_genre)) + 
+  geom_density(alpha = 0.3) + theme_bw() +
+  ggtitle("Plot of tempo Distribution") +
+  theme(plot.title = element_text(size = 11))
+```
+
+As expected tempo of edm songs are the highest.
+
+```{r}
+#plotting the popularity of tracks according to genre
+ggplot(spotify, aes(x=playlist_genre, y=track_popularity, fill=playlist_genre)) + 
+ geom_bar(stat="identity")
+  ggtitle("Plot of tempo Distribution") +
+  theme(plot.title = element_text(size = 11))
+```
+
+```{r include=FALSE}
+head(spotify)
+```
+
+```{r}
+#counting the number of songs by their popularity ranking.
+spotify %>% count(track_popularity)
+```
+
+
+
+```{r include=FALSE}
+library(highcharter)
+hpolar <- function(x, a, c, z) { 
+    
+highchart() %>% 
+  hc_chart(polar = TRUE) %>% 
+  hc_title(text = x) %>% 
+  hc_xAxis(categories = a,
+           tickmarkPlacement = "on",
+           lineWidth = 0) %>% 
+  hc_yAxis(gridLineInterpolation = "polygon",
+           lineWidth = 0,
+           min = 0) %>% 
+  hc_series(
+    list(
+      name = z,
+      data = c,
+      pointPlacement = "on",
+      type = "column",
+      color = '#646a70'  
+    
+    )
+  )    
+
+}   
+```
+
+
+```{r}
+# Popularity - Top 10 songs
+
+popular_df <- spotify %>%
+  select(track_album_name, track_popularity, track_artist) %>%
+  group_by(track_artist, track_album_name, track_popularity)%>%
+  summarise(n = n())%>%
+  arrange(desc(track_popularity))%>%
+  head(20) 
+
+
+hpolar('Popularity - Top 20 songs', popular_df$track_album_name, popular_df$track_popularity,'popularity')
+
+popular_df[,-4]
+```
+
+**Most popular artists**
+
+```{r}
+  spotify %>%
+  group_by(track_artist) %>%
+  summarise(freq = n()) %>%
+  arrange(desc(freq)) %>%
+  slice(12:25) %>%
+ggplot(., aes(reorder(track_artist, +freq), freq))+
+  geom_bar(stat = "identity", fill = "deepskyblue3", col = "grey20")+
+  coord_flip()+
+  labs(x = "" ,y = "Number of songs in Top 100", title = "Most popular artists")+
+  geom_text(aes(label = freq, y = freq/2), size = 5)
+```
+
+
+```{r}
+#plotting the distribution of tempo vs duration according to genre of tracks
+ggplot(spotify, aes(duration_ms, fill=playlist_genre)) + 
+ geom_density(alpha = 0.3) + theme_bw() +
+  ggtitle("Plot of tempo Distribution") +
+  theme(plot.title = element_text(size = 11))
+```
+```{r}
+ggplot(spotify, aes(x=loudness, y=track_popularity)) + 
+ geom_point(alpha = 0.3, color="blue") + theme_bw() +
+  ggtitle("Plot of tempo Distribution") +
+  theme(plot.title = element_text(size = 11))
+```
+
+```{r}
+pairs.panels(spotify[c("track_popularity","danceability","energy","key","loudness","mode", "speechiness",     "acousticness","instrumentalness","liveness","valence","tempo" )],hist.col = "green",gap=0)
+```
+
+## Data Wrangling 
+
+
+```{r}
+features <-as.data.frame(spotify[,c(4,10,12:24)])
+head(features)
+```
+
+```{r}
+#features<-features[,-2]
+features2<-features
+```
+
+
+
+## Kmeans Clustering {.tabset .tabset-fade .tabset-pills}
+
+
+
+K-means Clustering is an unsupervised meachine learning algorithm. It groups similar datapoints together and discrovers underlying patterns, by identifying a fixed nummber (K) clusters in dataset. ‘Means’ refers to the averaging of the data .e. finding the clusters. K is defined as the number of centroids we need in the dataset. A centroid is an imaginary or real location representing teh center of the cluster.
+
+Process:
+Starts with the first group of randomly selected centroids- which are the beginning points.
+
+Performs iterative(repititive) calculations to optimize the poistions of clusters.
+
+The process stops when the centroids are stabilized and the values don’t change with further iterations or when the defined number of iterations are reached.
+
+The bigger the value of K, the lower will be the variance within the groups in the clustering. If K is equal to the number of observations, then each point will be a group and the variance will be 0. It’s necessary to find an optimum number of clusters. variance within a group means how different the members of the group are. A large variance shows that there’s more dissimilarity in the groups.
+
+```{r}
+set.seed(13383610)
+input <- features[,c(1,3:15)]
+kmeans_fit<-kmeans(input, centers = 6, nstart = 20)
+kmeans_fit
+```
+
+The kmeans() function outputs the results of the clustering. The cluster in which each observation was allocated has a mean and a percentage (93.1%) that represents the compactness of the clustering, and how similar are the members within the same group. If all the observations within a group were in the same exact point in the n-dimensional space, then we would achieve 100% of compactness.  
+
+>**Plotting the clusters**
+
+```{r}
+library(fpc)
+plotcluster(input,kmeans_fit$cluster,xlab="Number of groups") 
+```
+
+We want to view the result so We can use fviz_cluster. It is function can provide a nice graph of the clusters. Usually, we have more than two dimensions (variables) fviz_cluster will perform principal component analysis (PCA) and plot the data points according to the first two principal components that explain the majority of the variance.
+
+```{r}
+library(factoextra)
+fviz_cluster(kmeans_fit, data = input)
+```
+
+
+
+**Checking the prediction table**
+
+```{r}
+table(kmeans_fit$cluster, features2$playlist_genre)
+```
+As we can see, the data belonging to each class has been misclassified in other classes and there's no perfect clustering.  
+
+**Within sum of squares**
+
+Let’s plot a chart showing the “within sum of squares” by the number of groups (K value). The within sum of squares is a metric that shows the dissimilarity within members of a group. The greater is the sum, the greater is the dissimilarity.
+
+**Identifying optimal number of clusters in K-means clustering**
+
+Elbow method is widely used to determine optimal number of clusters in K-means clustering. This method takes into consideration the total within-cluster sum of square (WSS) as a function of the number of clusters K. Optimal value of K is such that adding another cluster doesn’t improve much better the total WSS.
+
+```{r}
+wssplot <- function(input, nc=15, seed=13383610){
+               wss <- (nrow(input)-1)*sum(apply(input,2,var))
+               for (i in 2:nc){
+                    set.seed(seed)
+                    wss[i] <- sum(kmeans(input, centers=i)$withinss)}
+                plot(1:nc, wss, type="b", xlab="Number of groups",
+                     ylab="Sum of squares within a group")}
+
+wssplot(input, nc = 20)
+```
+
+going from K=6 to further ahead there’s a decrease in the sum of squares, which means our dissimilarity will decrease and compactness will increase if we take K greather than 8. BUt our elbow method suggests a cluster size of 3. So, let’s choose K = 3 and run the K-means again.
+
+```{r}
+kmeans_fit2<-kmeans(input, centers = 3, nstart = 20)
+kmeans_fit2
+```
+
+```{r}
+table(kmeans_fit2$cluster, features2$playlist_genre)
+```
+
+```{r}
+plotcluster(input,kmeans_fit2$cluster,xlab="Number of groups") 
+```
+
+```{r}
+fviz_cluster(kmeans_fit2, data = input)
+```
+
+```{r}
+n_clust<-fviz_nbclust(input[1:1000,], kmeans, method = "wss")
+n_clust<-n_clust$data
+
+n_clust %>% rename(Number_of_clusters=clusters,Within_sum_of_squared_error=y) %>% 
+  mutate(Within_sum_of_squared_error = color_tile("white", "red")(Within_sum_of_squared_error)) %>% 
+  kable("html", escape = F) %>% 
+  kable_styling("hover", full_width = F) %>% 
+  column_spec(2, width = "5cm") %>%
+  row_spec(3:3, bold = T, color = "white", background = "grey")
+```
+
+We observe that the within sum of squared error of clusters stablized when k becomes equal to 4 which was also infered from the elbow curve above.
+
+## Hierarchical Clustering {.tabset .tabset-fade .tabset-pills}
+
+Hierarchical clustering is an alternative approach to clustering which builds a hierarchy from the bottom-up, and doesn’t require us to specify the number of clusters beforehand. There are two types of hierarchical clustering
+
+a) **Agglomerative** - Each data point is considered a separate cluster initially and at each iteration, similar clusters merge with other clusters util one or desired number of clusters are formed.
+
+b) **Divisive** -It’s the opposite of Agglomerative clustering. All data points are considered into a single cluster and then are separated further until we get the desired number of clusters.
+
+**Process:**
+1) Compute proximity/dissimilarity/distance matrix. This is the backbone of our clustering. It is a mathematical expression of how different or distant the data-points are from each other.
+
+2) There are many ways to calculate dissimilarity between clusters. These are the linkage methods.
+a) MIN
+b) MAX
+c) Group Average
+d) Ward’s method
+
+3) Let each data point be a cluster.
+4) Merge the 2 closest clusters based on the distances from the distance matrix and as a result the amount of clusters goes down by 1.
+5)Update proximity/distance matrix and repeat step 4 until desired clusters remain.
+
+Let us see how well the hierarchical clustering algorithm performs on our dataset. We will use hclust() for this which requires us to provide the data in the form of a distance matrix. We will create this by using dist().
+
+```{r}
+clusters <- hclust(dist(input))
+```
+```{r}
+plot(clusters, xlab="Clusters",
+                     ylab="Height of dendogram")
+```
+
+
+
+```{r}
+clusterCut <- cutree(clusters, 6)
+table(clusterCut, features$playlist_genre)
+```
+
+
+```{r}
+plot(clusters, xlab="Clusters",
+                     ylab="Height of dendogram")
+rect.hclust(clusters , k = 3, border = 2:6)
+abline(h = 3, col = 'red')
+```
+
+
+```{r include=FALSE}
+features<-features[,-2]
+features
+```
+
+
+```{r}
+spotify_scale <- scale(features, center = T, scale = T)
+```
+
+```{r}
+RNGkind(sample.kind = "Rounding")
+kmeansTunning <- function(data, maxK){
+  withinall <-  NULL
+  total_k <-  NULL
+  for (i in 2: maxK){
+    set.seed(101)
+    temp <- kmeans(data,i)$tot.withinss
+    withinall <- append(withinall, temp)
+    total_k <-  append(total_k,i)
+  }
+  plot(x = total_k, y = withinall, type = "o", xlab = "Number of Cluster", ylab = "Total Within")
+}
+
+kmeansTunning(spotify_scale, maxK = 20)
+```
+
+## Comparison {.tabset .tabset-fade .tabset-pills}
+
+Clustering is rather a subjective statistical analysis and there can be more than one appropriate algorithm, depending on the dataset at hand or the type of problem to be solved. So choosing between k-means and hierarchical clustering is not always easy. 
+
+
+If you have a good reason to think that there is a specific number of clusters in your dataset (for example if you would like to distinguish diseased and healthy patients depending on some characteristics but you do not know in which group patients belong to), you should probably opt for the k-means clustering as this technique is used when the number of groups is specified in advance. 
+
+Efficient:  Time  complexity:  O(tkn), where  n is the number of data points,   k is the number  of clusters,  and t  is  the  number  of iterations. Since  both  k  and  t  are  small.  k-Means  is considered a linear algorithm
+
+In addition to this, if you are still undecided note that, on the one hand, with a large number of variables, k-means may be computationally faster than hierarchical clustering if the number of clusters is small.
+
+If you do not have any reason to believe there is a certain number of groups in your dataset (for instance in marketing when trying to distinguish clients without any prior belief on the number of different types of customers), then you should probably opt for the hierarchical clustering to determine in how many clusters your data should be divided.
+
+
+Conceptually Simple: Theoretical properties are well understood. When  Clusters  are  merged  /split,  the decision  is  permanent  =>  the  number  of different  alternatives  that  need  to  be examined is reduced.
+
+On the other hand, the result of a hierarchical clustering is a structure that is more informative and interpretable than the unstructured set of flat clusters returned by k-means. Therefore, it is easier to determine the optimal number of clusters by looking at the dendrogram of a hierarchical clustering than trying to predict this optimal number in advance in case of k-means.
+
+Based in our dataset, **K-means** is the best choice and provides  the best outcome.
+
+
+
+## Summary
+
+
+**Problem Statement** The analysis was intended to understand the evolution of music over time as well as understand the characterisitcs of various genres of music. In addition to that, we also identified the underlying patterns and relationsships of various features that describe music using spotify data.
+
+**Methodology**
+
+We started by looking at correlations amongst various features followed by the distributions for each of these features.
+We then examined the top artists within each genre using tree map.
+This was followed by looking at variability of characteristics amongst the 6 genres using radar charts.
+We then analysed how various major features evolved in the past decade.
+Lastly, we performed k-means clustering to understand commonalities between various genres and found the optimal number of clusters using elbow method.
+
+**Insights**
+
+Energy is highly positively correlated with loudness while it is highly negatively correlated with acousticness.
+A lot of songs high a popularity score of 0, which means a lot of songs haven’t been explored yet.
+For Genres EDM, rock, pop, rap, latin and r&b, the top artists are Martin Garrix, Queen, The Chainsmoker, Logic, Don Omar and Bobby Brown respectively.
+Latin music is most loudest as well as most danceable among all genres. R&b and rap tracks tend to have relatively less energy as compared to other genres, while EDM has the highest acousticness.
+Interestingly, songs are getting shorter by the year, while also becoming danceable over time.
+Even though we have six genres in the data, as per clustering technique we got only 3 optimal clusters which means a lot of the genres are very similar.
+
+**Implications**
+
+This analysis was conducted to explore the evolution of music over time and also diving deeper to understand trends in what makes a song more danceable than others can help DJs, artists, and producers create music based on characteristics like tempo or level of speechiness.
+
+Netflix has a commendable job by leveraging data to produce video content, and the next music revolution could be brought in by similar techniques.
+
+**Limitations**
+
+Even though there are millions of songs that exist, we only had about 32k records for our analysis, and hence we couldn’t obtain a full picture of the features of music.
+
+Also the analysis could be strengthened by incorporating user related features like their demographical attributes, user history etc.
