@@ -18,4 +18,4 @@ Broadly, we will be performing the following steps to accomplish the project obj
 9. Apply Hierarchical clustering algorithm
 10. Use elbow curve which helps to find the optimum number of clusters
 
-Our analysis can help understand consumer behavior and suggest what music are they looking for and hence provide direction to artists and music producers.
+This analysis can help understand consumer behavior and suggest what music are they looking for and hence provide direction to artists and music producers.
